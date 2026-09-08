@@ -1,0 +1,36 @@
+{
+  "Actions": [
+    {
+      "Icon": "imgs/actionIcon",
+      "Name": "Semáforo IA",
+      "States": [
+        { "Image": "imgs/state-green", "TitleAlignment": "bottom" },
+        { "Image": "imgs/state-yellow", "TitleAlignment": "bottom" },
+        { "Image": "imgs/state-red", "TitleAlignment": "bottom" }
+      ],
+      "SupportedInMultiActions": false,
+      "PropertyInspectorPath": "pi/index.html",
+      "Tooltip": "Estado combinado de Claude Code y OpenCode. Verde = listo, amarillo = trabajando, rojo = esperando confirmación.",
+      "UUID": "com.aistatus.opendeck.status",
+      "VisibleInActionsList": true
+    }
+  ],
+  "Author": "Tú",
+  "CodePath": "plugin.js",
+  "CodePathMac": "plugin.js",
+  "CodePathWin": "launch.bat",
+  "Description": "Semáforo de estado combinado para Claude Code y OpenCode: verde (listo), amarillo (trabajando), rojo (esperando confirmación).",
+  "Icon": "imgs/pluginIcon",
+  "Name": "AI Semaphore",
+  "URL": "",
+  "Version": "1.0.0",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "6.5"
+  },
+  "OS": [
+    { "Platform": "linux", "MinimumVersion": "10" },
+    { "Platform": "mac", "MinimumVersion": "10.15" },
+    { "Platform": "windows", "MinimumVersion": "10" }
+  ]
+}

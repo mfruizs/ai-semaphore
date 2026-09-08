@@ -1,0 +1,10 @@
+{
+  "name": "aisemaphore-opendeck-plugin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plugin de OpenDeck que muestra un semáforo combinado del estado de Claude Code y OpenCode",
+  "main": "plugin.js",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

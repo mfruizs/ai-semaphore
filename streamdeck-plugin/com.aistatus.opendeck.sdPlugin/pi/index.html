@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>AI Semaphore</title>
+<style>
+  body {
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    background: #2d2d2d;
+    color: #eee;
+    padding: 16px;
+    margin: 0;
+  }
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #aaa;
+  }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background: #1e1e1e;
+    color: #eee;
+    font-family: monospace;
+    margin-bottom: 8px;
+  }
+  .row { margin-bottom: 16px; }
+  button {
+    padding: 8px 14px;
+    margin-right: 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    color: white;
+  }
+  #copyBtn { background: #3a7afe; }
+  #regenBtn { background: #e2483a; }
+  #savePortBtn { background: #3a7afe; }
+  #msg, #portMsg { font-size: 12px; color: #3ac25e; margin-top: 4px; min-height: 14px; }
+  p.hint { font-size: 11px; color: #888; line-height: 1.4; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <label for="token">Token de autenticación del semáforo</label>
+    <input type="text" id="token" value="(cargando…)" readonly />
+    <button id="copyBtn">Copiar</button>
+    <button id="regenBtn">Regenerar</button>
+    <div id="msg"></div>
+    <p class="hint">
+      Protege el servidor local del plugin para que solo tus hooks de Claude
+      Code y tu plugin de OpenCode puedan cambiar el color del semáforo.
+      Cópialo y pégalo en la cabecera
+      <code>Authorization: Bearer &lt;token&gt;</code> de ambos. Si lo
+      regeneras, tendrás que actualizarlo en los dos sitios.
+    </p>
+  </div>
+
+  <div class="row">
+    <label for="port">Puerto del servidor local</label>
+    <input type="number" id="port" min="1" max="65535" value="47663" />
+    <button id="savePortBtn">Guardar puerto</button>
+    <div id="portMsg"></div>
+    <p class="hint">
+      Cámbialo solo si el 47663 choca con otra cosa en tu máquina. Al
+      guardar, el plugin reinicia su servidor en el nuevo puerto — recuerda
+      actualizar también la URL en los hooks de Claude Code y en
+      <code>STATUS_URL</code> del plugin de OpenCode.
+    </p>
+  </div>
+
+<script>
+  let websocket = null;
+  let piContext = null;
+  // Reflejamos aquí lo último conocido de ambos campos, porque
+  // "setGlobalSettings" sobrescribe el objeto completo: hay que mandar
+  // siempre token + port juntos aunque solo cambie uno de los dos.
+  let currentSettings = { token: "", port: 47663 };
+
+  // OpenDeck / Stream Deck invoca esta función global al cargar la página.
+  function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent) {
+    piContext = inUUID;
+    websocket = new WebSocket("ws://127.0.0.1:" + inPort);
+
+    websocket.onopen = () => {
+      websocket.send(JSON.stringify({ event: inRegisterEvent, uuid: inUUID }));
+      websocket.send(JSON.stringify({ event: "getGlobalSettings", context: inUUID }));
+    };
+
+    websocket.onmessage = (evt) => {
+      const msg = JSON.parse(evt.data);
+      if (msg.event === "didReceiveGlobalSettings") {
+        const settings = (msg.payload && msg.payload.settings) || {};
+        if (settings.token) currentSettings.token = settings.token;
+        if (typeof settings.port === "number") currentSettings.port = settings.port;
+
+        document.getElementById("token").value = currentSettings.token || "(generándose…)";
+        document.getElementById("port").value = currentSettings.port || 47663;
+      }
+    };
+  }
+
+  function persistSettings() {
+    websocket.send(JSON.stringify({
+      event: "setGlobalSettings",
+      context: piContext,
+      payload: currentSettings,
+    }));
+  }
+
+  document.getElementById("copyBtn").addEventListener("click", () => {
+    navigator.clipboard.writeText(currentSettings.token || "").then(() => showMsg("msg", "Copiado ✔"));
+  });
+
+  document.getElementById("regenBtn").addEventListener("click", () => {
+    currentSettings.token = crypto.randomUUID();
+    document.getElementById("token").value = currentSettings.token;
+    persistSettings();
+    showMsg("msg", "Token regenerado — actualízalo también en Claude Code y OpenCode");
+  });
+
+  document.getElementById("savePortBtn").addEventListener("click", () => {
+    const value = parseInt(document.getElementById("port").value, 10);
+    if (!Number.isInteger(value) || value < 1 || value > 65535) {
+      showMsg("portMsg", "Puerto inválido (usa un número entre 1 y 65535)");
+      return;
+    }
+    currentSettings.port = value;
+    persistSettings();
+    showMsg("portMsg", "Puerto guardado — actualízalo también en Claude Code y OpenCode");
+  });
+
+  function showMsg(elId, text) {
+    const el = document.getElementById(elId);
+    el.textContent = text;
+    setTimeout(() => (el.textContent = ""), 4000);
+  }
+</script>
+</body>
+</html>
