@@ -2,6 +2,11 @@
 
 [English](README.md)
 
+<p align="center">
+  <img src="docs/pluginIcon.png" alt="AI Semaphore appearance in the OpenDeck interface" style="width:200px; height:200px">
+  <br>
+</p>
+
 Una sola tecla en tu Stream Deck Mini que combina el estado de **Claude Code**
 y **OpenCode**:
 
@@ -48,9 +53,19 @@ proceso adicional corriendo.
    `CodePathMac`, con su shebang `#!/usr/bin/env node`), no necesitas nada
    adicional ahí.
 
+<p align="center">
+  <img src="docs/ia-semaphore-icon.png" alt="Aspecto del Semáforo IA en la interfaz de OpenDeck">
+  <br>
+  <em>Así se ve el semáforo en estado verde (listo para nuevas tareas) una vez asignado a una tecla de tu Stream Deck Mini.</em>
+</p>
 2. Reinicia OpenDeck (o usa `opendeck --reload-plugin com.aistatus.opendeck.sdPlugin`
    si tu versión lo soporta).
 
+<p align="center">
+  <img src="docs/ia-semaphore-config.png" alt="Panel de configuración del Property Inspector">
+  <br>
+  <em>Desde el panel de propiedades puedes copiar tu token de seguridad único o modificar el puerto por defecto si tienes algún conflicto.</em>
+</p>
 3. En la app añade la acción **"Semáforo IA"** a una tecla de tu Stream Deck Mini.
 
 4. Comprueba que el servidor de estado responde:
