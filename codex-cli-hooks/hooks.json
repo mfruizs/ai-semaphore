@@ -1,0 +1,37 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"yellow\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/codex\" >/dev/null",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"red\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/codex\" >/dev/null",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"green\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/codex\" >/dev/null",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

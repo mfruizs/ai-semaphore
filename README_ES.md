@@ -1,4 +1,4 @@
-# AI Semaphore — semáforo de estado para Claude Code y OpenCode en OpenDeck
+# AI Semaphore — semáforo de estado para Claude Code, Copilot CLI, Codex CLI y OpenCode en OpenDeck
 
 [English](README.md)
 
@@ -11,25 +11,25 @@
   <br>
 </p>
 
-Una sola tecla en tu Stream Deck Mini que combina el estado de **Claude Code**
-y **OpenCode**:
-
-- 🔴 **Rojo** — alguno de los dos está esperando tu confirmación/permiso.
-- 🟡 **Amarillo** — alguno de los dos está trabajando (ningún rojo activo).
-- 🟢 **Verde** — ambos están listos para una tarea nueva.
+- 🔴 **Rojo** — alguno de los cuatro está esperando tu confirmación/permiso.
+- 🟡 **Amarillo** — alguno está trabajando (y ninguno en rojo).
+- 🟢 **Verde** — los cuatro están listos para una tarea nueva.
 
 Prioridad al combinar: **rojo > amarillo > verde** (si uno pide confirmación,
-manda el rojo aunque el otro esté trabajando).
+manda el rojo aunque otro esté trabajando).
 
 Pulsar la tecla muestra 3 segundos el detalle por herramienta (`C:` Claude,
-`O:` OpenCode) por si quieres saber cuál de los dos está en ese estado.
+`O:` OpenCode, `G:` GitHub Copilot, `X:` Codex) por si quieres saber cuál de
+las cuatro está en ese estado.
 
 ## Piezas
 
 ```
-streamdeck-plugin/   -> el plugin de OpenDeck (la tecla + el servidor de estado local)
-claude-code-hooks/   -> hooks para que Claude Code avise al semáforo
-opencode-plugin/     -> plugin de OpenCode que avise al semáforo
+streamdeck-plugin/    -> el plugin de OpenDeck (la tecla + el servidor de estado local)
+claude-code-hooks/    -> hooks para que Claude Code avise al semáforo
+copilot-cli-hooks/    -> hooks para que Copilot CLI avise al semáforo
+codex-cli-hooks/      -> hooks para que Codex CLI avise al semáforo
+opencode-plugin/      -> plugin de OpenCode que avise al semáforo
 ```
 
 Todo se comunica por HTTP en `127.0.0.1:47663` (configurable). El propio
@@ -57,26 +57,16 @@ proceso adicional corriendo.
    `CodePathMac`, con su shebang `#!/usr/bin/env node`), no necesitas nada
    adicional ahí.
 
-<p align="center">
-  <img src="docs/ia-semaphore-icon.png" alt="Aspecto del Semáforo IA en la interfaz de OpenDeck">
-  <br>
-  <em>Así se ve el semáforo en estado verde (listo para nuevas tareas) una vez asignado a una tecla de tu Stream Deck Mini.</em>
-</p>
 2. Reinicia OpenDeck (o usa `opendeck --reload-plugin com.aistatus.opendeck.sdPlugin`
    si tu versión lo soporta).
 
-<p align="center">
-  <img src="docs/ia-semaphore-config.png" alt="Panel de configuración del Property Inspector">
-  <br>
-  <em>Desde el panel de propiedades puedes copiar tu token de seguridad único o modificar el puerto por defecto si tienes algún conflicto.</em>
-</p>
 3. En la app añade la acción **"Semáforo IA"** a una tecla de tu Stream Deck Mini.
 
 4. Comprueba que el servidor de estado responde:
 
    ```bash
    curl http://127.0.0.1:47663/status
-   # {"claude":0,"opencode":0}   -> 0=verde, 1=amarillo, 2=rojo
+   # {"claude":0,"opencode":0,"copilot":0,"codex":0,"port":47663}  -> 0=verde, 1=amarillo, 2=rojo
    ```
 
    En Windows (PowerShell): `Invoke-RestMethod http://127.0.0.1:47663/status`
@@ -96,10 +86,10 @@ Para verlo:
    configuración (el Property Inspector).
 2. Verás el campo **"Token de autenticación del semáforo"** con dos botones:
    **Copiar** y **Regenerar**.
-3. Cópialo — lo necesitas en los dos pasos siguientes.
+3. Cópialo — lo necesitas en los pasos de conexión de abajo.
 
 Si alguna vez sospechas que se ha filtrado, pulsa **Regenerar** y actualízalo
-en los dos sitios de abajo (el anterior deja de funcionar al instante).
+en todos los sitios de abajo (el anterior deja de funcionar al instante).
 
 ## 3. (Opcional) Cambiar el puerto
 
@@ -108,16 +98,16 @@ mismo panel del Property Inspector verás el campo **"Puerto del servidor
 local"** con su botón **Guardar puerto** — al guardar, el plugin reinicia su
 servidor ahí mismo, sin tener que reiniciar OpenDeck.
 
-Eso sí: los otros dos consumidores (los hooks de Claude y el plugin de
-OpenCode) no se enteran solos del cambio. Tienes dos formas de mantenerlos
-sincronizados:
+Eso sí: los demás consumidores (los hooks de Claude, Copilot, Codex y el
+plugin de OpenCode) no se enteran solos del cambio. Tienes dos formas de
+mantenerlos sincronizados:
 
-- **Manual**: edita el número `47663` a mano en `settings.snippet.json` y en
+- **Manual**: edita el número `47663` a mano en cada archivo de hooks y en
   `ai-semaphore.ts`.
 - **Con variable de entorno**: exporta `AI_SEMAPHORE_PORT=<nuevo_puerto>` en
-  el shell desde el que arrancas Claude Code y OpenCode (por ejemplo en tu
-  `~/.bashrc`/`~/.zshrc`). Ambos archivos ya la leen si está presente, así
-  que no hace falta tocar nada más.
+  el shell desde el que arrancas cada herramienta (por ejemplo en tu
+  `~/.bashrc`/`~/.zshrc`). Todos los archivos ya la leen si está presente,
+  así que no hace falta tocar nada más.
 
 ## 4. Conectar Claude Code
 
@@ -133,7 +123,55 @@ Qué hace cada uno:
 - `Notification` (matcher `permission_prompt`) → rojo, cuando pide permiso.
 - `Stop` → verde, cuando termina de responder.
 
-## 5. Conectar OpenCode
+## 5. Conectar Copilot CLI
+
+Copia `copilot-cli-hooks/ai-semaphore.json` a:
+
+- `~/.copilot/hooks/ai-semaphore.json` para que aplique a todas tus sesiones
+  (Linux/macOS; en Windows es `%USERPROFILE%\.copilot\hooks\ai-semaphore.json`), o
+- `.github/hooks/ai-semaphore.json` dentro de un proyecto concreto.
+
+Sustituye las tres apariciones de `<TU_TOKEN>` por el token copiado.
+
+Qué hace cada uno:
+- `userPromptSubmitted` → amarillo, en cuanto le mandas una tarea.
+- `permissionRequest` → rojo, cuando pide permiso para ejecutar una herramienta.
+- `agentStop` → verde, cuando termina el turno.
+
+Copilot CLI carga automáticamente los `.json` de esas carpetas al arrancar,
+no hace falta ningún paso de registro adicional.
+
+## 6. Conectar Codex CLI
+
+⚠️ El sistema de hooks de Codex CLI es **experimental** a día de hoy: viene
+desactivado por defecto y **no está disponible en Windows**. Actívalo
+primero añadiendo esto a `~/.codex/config.toml`:
+
+```toml
+[features]
+codex_hooks = true
+```
+
+Luego copia `codex-cli-hooks/hooks.json` a:
+
+- `~/.codex/hooks.json` para que aplique a todas tus sesiones, o
+- `<tu_repo>/.codex/hooks.json` dentro de un proyecto concreto (sigue el
+  modelo de confianza de "proyecto no confiable" de Codex, igual que el
+  resto de configuración de proyecto).
+
+Sustituye las tres apariciones de `<TU_TOKEN>` por el token copiado.
+
+Qué hace cada uno:
+- `UserPromptSubmit` → amarillo, en cuanto le mandas una tarea.
+- `PermissionRequest` → rojo, cuando pide permiso para ejecutar algo.
+- `Stop` → verde, cuando termina el turno.
+
+Nota: `PermissionRequest` en Codex puede dispararse también para peticiones
+que luego se auto-aprueban sin que tengas que tocar nada (si usas el modo
+"aprobar por mí"), así que alguna vez verás un parpadeo de rojo más breve de
+lo esperado. Es una limitación conocida del propio hook, no del semáforo.
+
+## 7. Conectar OpenCode
 
 Copia `opencode-plugin/ai-semaphore.ts` a:
 
@@ -159,6 +197,7 @@ no hace falta registrarlo en `opencode.json`.
   mismo con las variables de entorno `AI_SEMAPHORE_TOKEN` y
   `AI_SEMAPHORE_PORT` antes de lanzarlo; el plugin las usa en vez de lo
   guardado en el Property Inspector.
-- El `Stop` de Claude Code se dispara cada vez que termina de responder, no
-  solo al completar una tarea larga con varias vueltas; para tu caso de uso
-  (saber cuándo puedes mandarle algo nuevo) es exactamente lo que hace falta.
+- El `Stop`/`agentStop` de cada herramienta se dispara cada vez que termina
+  de responder, no solo al completar una tarea larga con varias vueltas;
+  para tu caso de uso (saber cuándo puedes mandarle algo nuevo) es
+  exactamente lo que hace falta.

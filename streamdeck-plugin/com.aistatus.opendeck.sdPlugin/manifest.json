@@ -10,7 +10,7 @@
       ],
       "SupportedInMultiActions": false,
       "PropertyInspectorPath": "pi/index.html",
-      "Tooltip": "Estado combinado de Claude Code y OpenCode. Verde = listo, amarillo = trabajando, rojo = esperando confirmación.",
+      "Tooltip": "Estado combinado de Claude Code, Copilot CLI, Codex CLI y OpenCode. Verde = listo, amarillo = trabajando, rojo = esperando confirmación.",
       "UUID": "com.aistatus.opendeck.status",
       "VisibleInActionsList": true
     }
@@ -19,7 +19,7 @@
   "CodePath": "plugin.js",
   "CodePathMac": "plugin.js",
   "CodePathWin": "launch.bat",
-  "Description": "Semáforo de estado combinado para Claude Code y OpenCode: verde (listo), amarillo (trabajando), rojo (esperando confirmación).",
+  "Description": "Semáforo de estado combinado para Claude Code, Copilot CLI, Codex CLI y OpenCode: verde (listo), amarillo (trabajando), rojo (esperando confirmación).",
   "Icon": "imgs/pluginIcon",
   "Name": "AI Semaphore",
   "URL": "",

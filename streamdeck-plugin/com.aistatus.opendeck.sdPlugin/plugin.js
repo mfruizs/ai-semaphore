@@ -50,6 +50,8 @@ const LABELS = { [STATE.RED]: "ESPERA", [STATE.YELLOW]: "RUN", [STATE.GREEN]: "O
 const sources = {
   claude: STATE.GREEN,
   opencode: STATE.GREEN,
+  copilot: STATE.GREEN,
+  codex: STATE.GREEN,
 };
 
 const contexts = new Set(); // instancias de la tecla actualmente visibles
@@ -142,9 +144,13 @@ function pushState() {
 }
 
 // Al pulsar la tecla, muestra 3s el detalle por herramienta (útil cuando el
-// semáforo está en amarillo/rojo y quieres saber cuál de las dos lo causa).
+// semáforo está en amarillo/rojo y quieres saber cuál de las cuatro lo causa).
 function showDetail(context) {
-  const title = `C:${LABELS[sources.claude]}\nO:${LABELS[sources.opencode]}`;
+  const title =
+    `C:${LABELS[sources.claude]}\n` +
+    `O:${LABELS[sources.opencode]}\n` +
+    `G:${LABELS[sources.copilot]}\n` +
+    `X:${LABELS[sources.codex]}`;
   ws.send(JSON.stringify({ event: "setTitle", context, payload: { title } }));
   setTimeout(() => {
     ws.send(JSON.stringify({ event: "setTitle", context, payload: { title: "" } }));
@@ -158,9 +164,9 @@ function isAuthorized(req) {
   return req.headers["authorization"] === `Bearer ${token}`;
 }
 
-// --- Servidor HTTP local: aquí escriben los hooks de Claude Code y el plugin de OpenCode ---
+// --- Servidor HTTP local: aquí escriben los hooks de Claude Code, Copilot CLI, Codex CLI y el plugin de OpenCode ---
 function requestHandler(req, res) {
-  const match = req.url.match(/^\/status\/(claude|opencode)$/);
+  const match = req.url.match(/^\/status\/(claude|opencode|copilot|codex)$/);
 
   if (req.method === "POST" && match) {
     if (!isAuthorized(req)) {
