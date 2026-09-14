@@ -45,8 +45,19 @@ Everything communicates via HTTP on `127.0.0.1:47663` (configurable). The OpenDe
    (For Flatpak it would be `~/.var/app/me.amankhanna.opendeck/config/opendeck/plugins/`.)
 
    **On Windows**, copy the folder to `%AppData%\opendeck\plugins\` instead. The manifest already includes `CodePathWin` pointing to `launch.bat` (included in the folder), which is what OpenDeck executes on that platform — you only need to have [Node.js 20+](https://nodejs.org) installed and ensure `node --version` works from any console. On Linux and macOS, `plugin.js` is used directly (via `CodePath` / `CodePathMac`, with its `#!/usr/bin/env node` shebang), so you don't need anything extra there.
+<p align="center">
+  <img src="docs/ia-semaphore-icon.png" alt="AI Semaphore appearance in the OpenDeck interface">
+  <br>
+  <em>This is how the semaphore looks in the green (ready) state once assigned to a key on your Stream Deck Mini.</em>
+</p>
 
 2. Restart OpenDeck (or use `opendeck --reload-plugin com.aistatus.opendeck.sdPlugin` if your version supports it).
+
+<p align="center">
+  <img src="docs/ia-semaphore-config.png" alt="Property Inspector configuration panel">
+  <br>
+  <em>From the property panel, you can copy your unique security token or modify the default port if you run into any conflicts.</em>
+</p>
 
 3. In the app, add the **"AI Semaphore"** action to a key on your Stream Deck Mini.
 
