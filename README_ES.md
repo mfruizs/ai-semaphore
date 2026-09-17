@@ -161,7 +161,7 @@ primero añadiendo esto a `~/.codex/config.toml`:
 
 ```toml
 [features]
-codex_hooks = true
+hooks = true
 ```
 
 Luego copia `codex-cli-hooks/hooks.json` a:

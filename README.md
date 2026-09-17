@@ -122,7 +122,7 @@ Copilot CLI automatically loads `.json` files from those folders at startup, no 
 
 ```toml
 [features]
-codex_hooks = true
+hooks = true
 ```
 
 Then copy `codex-cli-hooks/hooks.json` to:
