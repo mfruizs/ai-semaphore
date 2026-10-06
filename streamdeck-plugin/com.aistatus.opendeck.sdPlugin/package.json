@@ -2,8 +2,11 @@
   "name": "aisemaphore-opendeck-plugin",
   "version": "1.0.0",
   "private": true,
-  "description": "Plugin de OpenDeck que muestra un semáforo combinado del estado de Claude Code y OpenCode",
+  "description": "Plugin de OpenDeck que muestra el estado de Claude Code, Copilot CLI, Codex CLI y OpenCode",
   "main": "plugin.js",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
   "dependencies": {
     "ws": "^8.18.0"
   }

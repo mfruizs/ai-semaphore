@@ -1,11 +1,34 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "^(startup|resume|clear)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" green",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"yellow\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/codex\" >/dev/null",
+            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" yellow",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" yellow",
             "timeout": 5
           }
         ]
@@ -16,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"red\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/codex\" >/dev/null",
+            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" red",
             "timeout": 5
           }
         ]
@@ -27,8 +50,30 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"green\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/codex\" >/dev/null",
+            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" green",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Interrupt": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" green",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" green",
+            "timeout": 3
           }
         ]
       }

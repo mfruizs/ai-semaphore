@@ -7,8 +7,8 @@
  * - Se conecta al WebSocket de OpenDeck (protocolo estándar del Stream Deck SDK).
  * - Levanta un pequeño servidor HTTP local (por defecto en el puerto 47663,
  *   configurable desde el Property Inspector) que recibe el estado de
- *   Claude Code y de OpenCode vía POST.
- * - Combina ambos estados con prioridad rojo > amarillo > verde y actualiza
+ *   Claude Code, Copilot CLI, Codex CLI y OpenCode vía POST.
+ * - Combina los estados con prioridad rojo > amarillo > verde y actualiza
  *   la tecla mediante "setState".
  * - Protege las peticiones que cambian estado con un token compartido.
  * - Token y puerto se generan/guardan como "global settings" del plugin
@@ -35,9 +35,12 @@ const DEFAULT_PORT = 47663;
 
 // Si se fija por entorno, gana siempre sobre lo guardado en el Property
 // Inspector (útil para pruebas o arranques scripteados).
-const ENV_PORT = process.env.AI_SEMAPHORE_PORT
-  ? parseInt(process.env.AI_SEMAPHORE_PORT, 10)
-  : null;
+function isValidPort(port) {
+  return Number.isInteger(port) && port >= 1 && port <= 65535;
+}
+
+const configuredPort = Number(process.env.AI_SEMAPHORE_PORT);
+const ENV_PORT = isValidPort(configuredPort) ? configuredPort : null;
 
 let currentPort = ENV_PORT || DEFAULT_PORT;
 
@@ -58,7 +61,13 @@ const contexts = new Set(); // instancias de la tecla actualmente visibles
 
 // Token compartido para autenticar los POST /status/*. Puede fijarse por
 // entorno (útil para pruebas); si no, se carga/genera vía global settings.
-let token = process.env.AI_SEMAPHORE_TOKEN || null;
+function isValidToken(value) {
+  return typeof value === "string" && value.length > 0 && !/[^\x21-\x7e]/.test(value) &&
+    value !== "<YOUR_TOKEN>";
+}
+
+const ENV_TOKEN = process.env.AI_SEMAPHORE_TOKEN || null;
+let token = ENV_TOKEN;
 
 function combinedState() {
   const values = Object.values(sources);
@@ -105,11 +114,13 @@ function connectToOpenDeck() {
 function handleGlobalSettings(settings) {
   let mustPersist = false;
 
-  if (settings.token) {
+  if (ENV_TOKEN) {
+    token = ENV_TOKEN;
+  } else if (isValidToken(settings.token)) {
     // Toma el valor guardado (incluye regeneraciones hechas desde el
     // Property Inspector, que también llegan por este mismo evento).
     token = settings.token;
-  } else if (!token) {
+  } else if (!isValidToken(token)) {
     // Primer arranque: no hay token guardado ni fijado por entorno.
     token = crypto.randomUUID();
     mustPersist = true;
@@ -117,10 +128,10 @@ function handleGlobalSettings(settings) {
 
   if (ENV_PORT) {
     // La variable de entorno manda; ignoramos lo que diga el PI para el
-    // puerto, pero seguimos dejando que gestione el token con normalidad.
-  } else if (typeof settings.port === "number" && settings.port !== currentPort) {
+    // puerto. El token también respeta ENV_TOKEN cuando está definido.
+  } else if (isValidPort(settings.port) && settings.port !== currentPort) {
     restartServer(settings.port);
-  } else if (typeof settings.port !== "number") {
+  } else if (!isValidPort(settings.port)) {
     // Todavía no se ha guardado ningún puerto: publicamos el actual para
     // que el Property Inspector tenga algo que mostrar y editar.
     mustPersist = true;
@@ -160,7 +171,7 @@ function showDetail(context) {
 function isAuthorized(req) {
   // Mientras el token todavía no se ha cargado/generado, denegamos por
   // defecto en vez de aceptar peticiones sin comprobar nada.
-  if (!token) return false;
+  if (!isValidToken(token)) return false;
   return req.headers["authorization"] === `Bearer ${token}`;
 }
 
@@ -174,18 +185,34 @@ function requestHandler(req, res) {
       res.end(JSON.stringify({ error: "token inválido o ausente" }));
       return;
     }
-    let body = "";
-    req.on("data", (chunk) => (body += chunk));
-    req.on("end", () => {
-      try {
-        const { state } = JSON.parse(body || "{}");
-        if (Object.prototype.hasOwnProperty.call(STATE_NAMES, state)) {
-          sources[match[1]] = STATE_NAMES[state];
-          pushState();
-        }
-      } catch {
-        // Body inválido: lo ignoramos silenciosamente.
+    const chunks = [];
+    let bodyBytes = 0;
+    const MAX_BODY_BYTES = 4096;
+    req.on("data", (chunk) => {
+      bodyBytes += chunk.length;
+      if (bodyBytes > MAX_BODY_BYTES) {
+        if (!res.writableEnded) sendError(res, 413, "payload_too_large");
+        return;
       }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      if (res.writableEnded) return;
+      let payload;
+      try {
+        payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      } catch {
+        sendError(res, 400, "invalid_json");
+        return;
+      }
+      if (!payload || typeof payload !== "object" || Array.isArray(payload) ||
+          typeof payload.state !== "string" ||
+          !Object.prototype.hasOwnProperty.call(STATE_NAMES, payload.state)) {
+        sendError(res, 400, "invalid_state");
+        return;
+      }
+      sources[match[1]] = STATE_NAMES[payload.state];
+      pushState();
       res.writeHead(204);
       res.end();
     });
@@ -198,13 +225,16 @@ function requestHandler(req, res) {
   }
 }
 
+function sendError(res, status, error) {
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ error }));
+}
+
 let server = http.createServer(requestHandler);
 
 function restartServer(newPort) {
   if (
-    !Number.isInteger(newPort) ||
-    newPort < 1 ||
-    newPort > 65535 ||
+    !isValidPort(newPort) ||
     newPort === currentPort
   ) {
     return;

@@ -10,7 +10,7 @@ const STATUS_URL = `http://127.0.0.1:${PORT}`;
 // "Semáforo IA" dentro de OpenDeck (botón "Copiar"). También puedes dejarlo
 // tal cual y en su lugar exportar la variable de entorno AI_SEMAPHORE_TOKEN
 // antes de lanzar OpenCode.
-const TOKEN = process.env.AI_SEMAPHORE_TOKEN || "<TU_TOKEN>";
+const TOKEN = process.env.AI_SEMAPHORE_TOKEN || "<YOUR_TOKEN>";
 
 async function post(state: "red" | "yellow" | "green") {
   try {

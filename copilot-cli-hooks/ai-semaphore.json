@@ -1,22 +1,67 @@
 {
   "version": 1,
   "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "\"$HOME/.copilot/ai-semaphore-hook.sh\" green",
+        "timeoutSec": 5
+      }
+    ],
     "userPromptSubmitted": [
       {
         "type": "command",
-        "bash": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"yellow\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/copilot\" >/dev/null"
+        "bash": "\"$HOME/.copilot/ai-semaphore-hook.sh\" yellow",
+        "timeoutSec": 5
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "\"$HOME/.copilot/ai-semaphore-hook.sh\" yellow",
+        "timeoutSec": 5
       }
     ],
     "permissionRequest": [
       {
         "type": "command",
-        "bash": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"red\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/copilot\" >/dev/null"
+        "bash": "\"$HOME/.copilot/ai-semaphore-hook.sh\" red",
+        "timeoutSec": 5
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "\"$HOME/.copilot/ai-semaphore-hook.sh\" yellow",
+        "timeoutSec": 5
+      }
+    ],
+    "postToolUseFailure": [
+      {
+        "type": "command",
+        "bash": "\"$HOME/.copilot/ai-semaphore-hook.sh\" yellow",
+        "timeoutSec": 5
       }
     ],
     "agentStop": [
       {
         "type": "command",
-        "bash": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"green\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/copilot\" >/dev/null"
+        "bash": "\"$HOME/.copilot/ai-semaphore-hook.sh\" green",
+        "timeoutSec": 5
+      }
+    ],
+    "errorOccurred": [
+      {
+        "type": "command",
+        "bash": "\"$HOME/.copilot/ai-semaphore-hook.sh\" green",
+        "timeoutSec": 5
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "\"$HOME/.copilot/ai-semaphore-hook.sh\" green",
+        "timeoutSec": 5
       }
     ]
   }

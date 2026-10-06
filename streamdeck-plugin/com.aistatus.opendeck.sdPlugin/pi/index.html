@@ -54,8 +54,8 @@
     <p class="hint">
       Protege el servidor local del plugin para que solo tus hooks de
       Claude Code, Copilot CLI, Codex CLI y tu plugin de OpenCode puedan
-      cambiar el color del semáforo. Cópialo y pégalo en la cabecera
-      <code>Authorization: Bearer &lt;token&gt;</code> de los cuatro. Si lo
+      cambiar el color del semáforo. Cópialo y pégalo en la asignación
+      <code>TOKEN</code> del script de cada IA. Si lo
       regeneras, tendrás que actualizarlo en todos los sitios.
     </p>
   </div>
@@ -68,8 +68,9 @@
     <p class="hint">
       Cámbialo solo si el 47663 choca con otra cosa en tu máquina. Al
       guardar, el plugin reinicia su servidor en el nuevo puerto — recuerda
-      actualizar también la URL en los hooks de Claude Code, Copilot CLI,
-      Codex CLI y en <code>STATUS_URL</code> del plugin de OpenCode.
+      actualizar también <code>PORT</code> en los scripts de Claude Code,
+      Copilot CLI y Codex CLI, y el puerto del plugin de OpenCode, o exportar
+      <code>AI_SEMAPHORE_PORT</code> antes de lanzar cada IA.
     </p>
   </div>
 
@@ -120,18 +121,18 @@
     currentSettings.token = crypto.randomUUID();
     document.getElementById("token").value = currentSettings.token;
     persistSettings();
-    showMsg("msg", "Token regenerado — actualízalo también en Claude Code y OpenCode");
+    showMsg("msg", "Token regenerado — actualízalo en Claude Code, Copilot CLI, Codex CLI y OpenCode");
   });
 
   document.getElementById("savePortBtn").addEventListener("click", () => {
-    const value = parseInt(document.getElementById("port").value, 10);
+    const value = Number(document.getElementById("port").value);
     if (!Number.isInteger(value) || value < 1 || value > 65535) {
       showMsg("portMsg", "Puerto inválido (usa un número entre 1 y 65535)");
       return;
     }
     currentSettings.port = value;
     persistSettings();
-    showMsg("portMsg", "Puerto guardado — actualízalo también en Claude Code y OpenCode");
+    showMsg("portMsg", "Puerto guardado — actualízalo en Claude Code, Copilot CLI, Codex CLI y OpenCode");
   });
 
   function showMsg(elId, text) {

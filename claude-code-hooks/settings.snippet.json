@@ -1,22 +1,80 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" green",
+            "timeout": 5
+          }
+        ],
+        "matcher": "^(startup|resume|clear|fork)$"
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"yellow\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/claude\" >/dev/null"
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" yellow",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" yellow",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" red",
+            "timeout": 5
           }
         ]
       }
     ],
     "Notification": [
       {
-        "matcher": "permission_prompt",
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"red\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/claude\" >/dev/null"
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" red",
+            "timeout": 5
+          }
+        ],
+        "matcher": "permission_prompt"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" yellow",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" yellow",
+            "timeout": 5
           }
         ]
       }
@@ -26,7 +84,30 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -m 2 -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <TU_TOKEN>' -d '{\"state\":\"green\"}' \"http://127.0.0.1:${AI_SEMAPHORE_PORT:-47663}/status/claude\" >/dev/null"
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" green",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" green",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" green",
+            "timeout": 5
           }
         ]
       }
