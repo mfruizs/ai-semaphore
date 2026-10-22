@@ -25,10 +25,21 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "^(?!AskUserQuestion$).*",
         "hooks": [
           {
             "type": "command",
             "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" yellow",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "^AskUserQuestion$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" red",
             "timeout": 5
           }
         ]
@@ -55,6 +66,28 @@
           }
         ],
         "matcher": "permission_prompt"
+      }
+    ],
+    "Elicitation": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" red",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "ElicitationResult": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/ai-semaphore-hook.sh\" yellow",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PostToolUse": [
