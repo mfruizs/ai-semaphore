@@ -194,18 +194,37 @@ already contains the root `hooks` object: do not nest it inside another `hooks`.
 Keep existing settings and hooks; append our entries to the event array when
 an event already exists. Commands use the script in `$HOME/.claude/` even for
 project configuration. Restart the Claude session to load the hooks.
+When upgrading an existing AI Semaphore integration, replace its previous entries
+for this script instead of appending duplicates. In particular, remove the old
+catch-all yellow `PreToolUse` entry before adding the two matchers below. Keep
+hooks belonging to other tools or plugins.
 
 | Event | State |
 | --- | --- |
 | `SessionStart` (startup/resume/clear/fork) | Green |
-| `UserPromptSubmit`, `PreToolUse` | Yellow |
+| `UserPromptSubmit`, `PreToolUse` (except `AskUserQuestion`) | Yellow |
+| `PreToolUse` (`AskUserQuestion` only) | Red while waiting for an answer |
 | `PermissionRequest` | Red immediately when requesting permission |
 | `Notification` (`permission_prompt` only) | Red; also covers network permission notifications |
+| `Elicitation` / `ElicitationResult` | Red for an MCP input request / yellow after the response |
 | `PostToolUse`, `PostToolUseFailure` | Yellow when resuming after a tool |
 | `Stop`, `StopFailure`, `SessionEnd` | Green |
 
 `PermissionRequest` avoids waiting for the permission notification. Compaction
 and idle notifications do not reset the semaphore.
+The two `PreToolUse` matchers are mutually exclusive so a question cannot trigger
+both red and yellow hooks. These hooks never approve tools or answer questions.
+
+Use `/hooks` in Claude Code to inspect the loaded entries. If they are missing,
+check `disableAllHooks`, managed `allowManagedHooksOnly`, and whether Claude was
+started with `--bare` or `--safe-mode`, which skip user hooks. With a custom
+`CLAUDE_CONFIG_DIR`, merge the settings there; the commands in this snippet still
+expect the script at `$HOME/.claude/ai-semaphore-hook.sh`.
+
+Claude does not run `Stop` for a user interrupt (Esc/Ctrl+C) and has no `Interrupt`
+hook. The previous color can remain until the next prompt or session end; to
+reset it manually, run `~/.claude/ai-semaphore-hook.sh green`. Multiple Claude
+sessions share the same source, so their most recent notification wins.
 Reference: [Claude Code hooks](https://code.claude.com/docs/en/hooks).
 
 ## 5. Connect Copilot CLI

@@ -228,18 +228,38 @@ contiene el objeto raíz `hooks`: no lo anides dentro de otro `hooks`. Conserva
 los ajustes y hooks existentes; si un evento ya existe, añade nuestras entradas
 a su array. Los comandos usan el script de `$HOME/.claude/` aunque la
 configuración sea de un proyecto. Reinicia la sesión de Claude para cargarlo.
+Al actualizar una integración de AI Semaphore existente, sustituye sus entradas
+anteriores para este script en vez de añadir duplicados. En particular, elimina
+la antigua entrada amarilla de `PreToolUse` sin filtro antes de añadir los dos
+filtros indicados abajo. Conserva los hooks de otras herramientas o plugins.
 
 | Evento | Estado |
 | --- | --- |
 | `SessionStart` (startup/resume/clear/fork) | Verde |
-| `UserPromptSubmit`, `PreToolUse` | Amarillo |
+| `UserPromptSubmit`, `PreToolUse` (excepto `AskUserQuestion`) | Amarillo |
+| `PreToolUse` (solo `AskUserQuestion`) | Rojo mientras espera una respuesta |
 | `PermissionRequest` | Rojo, al solicitar permiso |
 | `Notification` (solo `permission_prompt`) | Rojo; cubre también avisos de permisos de red |
+| `Elicitation` / `ElicitationResult` | Rojo al pedir datos desde MCP / amarillo tras responder |
 | `PostToolUse`, `PostToolUseFailure` | Amarillo, al retomar tras la herramienta |
 | `Stop`, `StopFailure`, `SessionEnd` | Verde |
 
 `PermissionRequest` evita esperar a la notificación de permiso. La
 compactación y las notificaciones de inactividad no reinician el semáforo.
+Los dos filtros de `PreToolUse` son excluyentes: una pregunta no puede lanzar
+hooks rojos y amarillos a la vez. Estos hooks nunca aprueban herramientas ni
+responden preguntas.
+
+Usa `/hooks` en Claude Code para comprobar las entradas cargadas. Si no aparecen,
+revisa `disableAllHooks`, la política administrada `allowManagedHooksOnly` y si
+Claude se inició con `--bare` o `--safe-mode`, que omiten los hooks del usuario. Con
+un `CLAUDE_CONFIG_DIR` personalizado, integra allí los ajustes; los comandos de
+este snippet siguen esperando el script en `$HOME/.claude/ai-semaphore-hook.sh`.
+
+Claude no ejecuta `Stop` al interrumpir con Esc/Ctrl+C y no ofrece un hook
+`Interrupt`. El color anterior puede permanecer hasta el siguiente mensaje o
+fin de sesión; puedes restablecerlo con `~/.claude/ai-semaphore-hook.sh green`.
+Varias sesiones de Claude comparten la misma fuente: prevalece el último aviso.
 Referencia: [hooks de Claude Code](https://code.claude.com/docs/en/hooks).
 
 ## 5. Conectar Copilot CLI
