@@ -256,6 +256,7 @@ test("Claude and Copilot configured commands work with manually pasted tokens", 
     ["claude", "claude-code-hooks", "settings.snippet.json", {
       SessionStart: "green", UserPromptSubmit: "yellow", PreToolUse: "yellow",
       PermissionRequest: "red", Notification: "red", PostToolUse: "yellow",
+      Elicitation: "red", ElicitationResult: "yellow",
       PostToolUseFailure: "yellow", Stop: "green", StopFailure: "green", SessionEnd: "green",
     }],
     ["copilot", "copilot-cli-hooks", "ai-semaphore.json", {
@@ -284,26 +285,49 @@ test("Claude and Copilot configured commands work with manually pasted tokens", 
       };
       // A user curlrc must not override the notification or leak its response to stdout.
       await fs.writeFile(path.join(home, ".curlrc"), 'url = "http://127.0.0.1:1"\nverbose\n');
-      const invoke = async event => {
-        const group = config.hooks[event][0];
+      const invoke = async (event, matchValue = "", expectedState = expected[event]) => {
+        const groups = config.hooks[event].filter(group => source !== "claude" ||
+          !group.matcher || new RegExp(group.matcher).test(matchValue));
+        assert.equal(groups.length, 1, `${event}:${matchValue} must notify exactly once`);
+        const group = groups[0];
         const handler = source === "claude" ? group.hooks[0] : group;
         const command = source === "claude" ? handler.command : handler.bash;
-        assert.equal(command, `"$HOME/.${source}/ai-semaphore-hook.sh" ${expected[event]}`);
+        assert.equal(command, `"$HOME/.${source}/ai-semaphore-hook.sh" ${expectedState}`);
         assert.equal(handler.type, "command");
         assert.equal(source === "claude" ? handler.timeout : handler.timeoutSec, 5);
-        const result = await runFile("bash", ["-c", command], { env, cwd: temp, timeout: 4500 });
-        assert.equal(result.stdout, "");
-        assert.equal(result.stderr, "");
-        const state = { green: 0, yellow: 1, red: 2 }[expected[event]];
+        // Claude sends hook input on stdin; the notifier must leave it private.
+        const input = JSON.stringify({ hook_event_name: event, tool_name: matchValue, tool_input: { private: "never-print-this" } });
+        const output = await new Promise((resolve, reject) => {
+          const child = execFile("bash", ["-c", command], { env, cwd: temp, timeout: 4500 },
+            (error, stdout, stderr) => error ? reject(error) : resolve({ stdout, stderr }));
+          child.stdin.on("error", error => { if (error.code !== "EPIPE") reject(error); });
+          child.stdin.end(input);
+        });
+        assert.equal(output.stdout, "");
+        assert.equal(output.stderr, "");
+        const state = { green: 0, yellow: 1, red: 2 }[expectedState];
         const status = await (await fetch(`${plugin.url}/status`)).json();
         assert.equal(status[source], state);
         const rendered = plugin.socket.messages.filter(m => m.event === "setState").at(-1);
         assert.equal(rendered.payload.state, state);
       };
       // Includes working -> permission -> working -> idle, and recovery from tool errors.
-      for (const event of Object.keys(expected)) await invoke(event);
+      for (const event of Object.keys(expected)) {
+        const matchValue = { SessionStart: "startup", PreToolUse: "Bash", Notification: "permission_prompt" }[event] || "";
+        await invoke(event, matchValue);
+      }
       if (source === "claude") {
+        // Questions must remain red until answered, without a competing yellow hook.
+        await invoke("UserPromptSubmit");
+        await invoke("PreToolUse", "AskUserQuestion", "red");
+        await invoke("PostToolUse", "AskUserQuestion");
+        await invoke("Elicitation", "test-mcp-server");
+        await invoke("ElicitationResult", "test-mcp-server");
+        await invoke("Stop");
         assert.equal(config.hooks.Notification[0].matcher, "permission_prompt");
+        for (const notification of ["idle_prompt", "auth_success", "elicitation_complete"]) {
+          assert.ok(!new RegExp(config.hooks.Notification[0].matcher).test(notification));
+        }
         const matcher = new RegExp(config.hooks.SessionStart[0].matcher);
         for (const start of ["startup", "resume", "clear", "fork"]) assert.ok(matcher.test(start));
         assert.ok(!matcher.test("compact"));
