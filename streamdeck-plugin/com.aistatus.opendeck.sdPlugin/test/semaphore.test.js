@@ -203,17 +203,92 @@ test("HTTP validation, authentication, state priority and Codex hook", async (t)
 
   await t.test("hook commands are token-free and compact does not reset green", async () => {
     const config = JSON.parse(await fs.readFile(path.join(hooksDir, "hooks.json"), "utf8"));
-    const expected = { SessionStart: "green", UserPromptSubmit: "yellow", PermissionRequest: "red", PostToolUse: "yellow", Stop: "green", Interrupt: "green", SessionEnd: "green" };
+    const expected = { SessionStart: "green", UserPromptSubmit: "yellow", PreToolUse: "red", PermissionRequest: "red", PostToolUse: "yellow", Stop: "green", Interrupt: "green", SessionEnd: "green" };
     assert.deepEqual(Object.keys(config.hooks).sort(), Object.keys(expected).sort());
     for (const [event, state] of Object.entries(expected)) {
       const handler = config.hooks[event][0].hooks[0];
-      assert.equal(handler.command, `"$HOME/.codex/ai-semaphore-hook.sh" ${state}`);
+      assert.equal(handler.command, 'python3 "$HOME/.codex/ai-semaphore-event.py"');
       assert.equal(handler.timeout, ["Interrupt", "SessionEnd"].includes(event) ? 3 : 5);
     }
     const matcher = new RegExp(config.hooks.SessionStart[0].matcher);
     for (const source of ["startup", "resume", "clear"]) assert.ok(matcher.test(source));
     assert.ok(!matcher.test("compact"));
   });
+});
+
+test("Codex questions keep the icon red until a reply or cancellation", async (t) => {
+  const plugin = await loadPlugin({ AI_SEMAPHORE_TOKEN: "question-test-token" });
+  plugin.socket.emit("message", JSON.stringify({ event: "willAppear", context: "key" }));
+  const temp = await fs.mkdtemp(path.join(os.tmpdir(), "codex-questions-"));
+  t.after(async () => {
+    plugin.server.closeAllConnections();
+    await new Promise(resolve => plugin.server.close(resolve));
+    await fs.rm(temp, { recursive: true, force: true });
+  });
+  const installed = path.join(temp, ".codex");
+  await fs.mkdir(installed);
+  for (const name of ["ai-semaphore-hook.sh", "ai-semaphore-event.py"]) {
+    await fs.copyFile(path.join(hooksDir, name), path.join(installed, name));
+  }
+  const config = JSON.parse(await fs.readFile(path.join(hooksDir, "hooks.json"), "utf8"));
+  const env = {
+    ...process.env, HOME: temp, XDG_CACHE_HOME: temp,
+    AI_SEMAPHORE_TOKEN: "question-test-token",
+    AI_SEMAPHORE_PORT: String(plugin.server.address().port),
+  };
+  const invoke = async (event, fields, expectedState) => {
+    const value = event === "SessionStart" ? fields.source : fields.tool_name || "";
+    const groups = config.hooks[event].filter(group => !group.matcher || new RegExp(group.matcher).test(value));
+    assert.equal(groups.length, 1, `${event}:${value}`);
+    const result = await new Promise((resolve, reject) => {
+      const child = execFile("bash", ["-c", groups[0].hooks[0].command], { env, cwd: temp, timeout: 4500 },
+        (error, stdout, stderr) => error ? reject(error) : resolve({ stdout, stderr }));
+      child.stdin.on("error", error => { if (error.code !== "EPIPE") reject(error); });
+      child.stdin.end(JSON.stringify({
+        hook_event_name: event, session_id: "test-session", tool_use_id: "question-1",
+        tool_input: { private: "never-persist-this-question" }, ...fields,
+      }));
+    });
+    assert.equal(result.stdout, "");
+    assert.equal(result.stderr, "");
+    assert.equal((await (await fetch(`${plugin.url}/status`)).json()).codex, expectedState);
+    assert.equal(plugin.socket.messages.filter(m => m.event === "setState").at(-1).payload.state, expectedState);
+  };
+
+  await invoke("SessionStart", { source: "startup" }, 0);
+  await invoke("UserPromptSubmit", {}, 1);
+  await invoke("PermissionRequest", { tool_name: "Bash" }, 2);
+  await invoke("PostToolUse", { tool_name: "Bash" }, 1);
+  await invoke("PreToolUse", { tool_name: "request_user_input" }, 2);
+  await invoke("PostToolUse", { tool_name: "Bash", tool_use_id: "other" }, 2);
+  await invoke("PostToolUse", { tool_name: "request_user_input", tool_response: { answers: {} } }, 1);
+
+  for (const response of [{ accepted: true }, JSON.stringify({ accepted: true })]) {
+    await invoke("PreToolUse", { tool_name: "request_user_input_async" }, 2);
+    await invoke("PostToolUse", { tool_name: "request_user_input_async", tool_response: response }, 2);
+    await invoke("PostToolUse", { tool_name: "Bash", tool_use_id: "background" }, 2);
+    await invoke("Stop", {}, 2);
+    // Another session must not clear this session's pending question.
+    await invoke("UserPromptSubmit", { session_id: "other-session" }, 1);
+    await invoke("PostToolUse", { tool_name: "Bash" }, 2);
+    await invoke("UserPromptSubmit", { prompt: "private answer" }, 1);
+    await invoke("Stop", {}, 0);
+  }
+  await invoke("PreToolUse", { tool_name: "functions.request_user_input_async" }, 2);
+  await invoke("PostToolUse", { tool_name: "functions.request_user_input_async", tool_response: { accepted: false } }, 1);
+  for (const event of ["Interrupt", "SessionEnd", "SessionStart"]) {
+    await invoke("PreToolUse", { tool_name: "request_user_input_async" }, 2);
+    await invoke(event, event === "SessionStart" ? { source: "resume" } : {}, 0);
+  }
+  const matcher = new RegExp(config.hooks.PreToolUse[0].matcher);
+  for (const tool of ["Bash", "exec_command", "apply_patch", "not_request_user_input", "request_user_input_extra"]) {
+    assert.equal(matcher.test(tool), false, tool);
+  }
+  for (const file of await fs.readdir(path.join(temp, "ai-semaphore/codex-pending"))) {
+    assert.equal((await fs.stat(path.join(temp, "ai-semaphore/codex-pending", file))).mode & 0o777, 0o600);
+    assert.ok(!(await fs.readFile(path.join(temp, "ai-semaphore/codex-pending", file), "utf8")).includes("private"));
+  }
+  await assert.rejects(fs.access(path.join(temp, "ai-semaphore/codex-hook.log")), { code: "ENOENT" });
 });
 
 test("saved token regeneration and startup denial without an environment token", async (t) => {
