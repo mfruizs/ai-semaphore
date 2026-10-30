@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" green",
+            "command": "python3 \"$HOME/.codex/ai-semaphore-event.py\"",
             "timeout": 5
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" yellow",
+            "command": "python3 \"$HOME/.codex/ai-semaphore-event.py\"",
             "timeout": 5
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" yellow",
+            "command": "python3 \"$HOME/.codex/ai-semaphore-event.py\"",
             "timeout": 5
           }
         ]
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" red",
+            "command": "python3 \"$HOME/.codex/ai-semaphore-event.py\"",
             "timeout": 5
           }
         ]
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" green",
+            "command": "python3 \"$HOME/.codex/ai-semaphore-event.py\"",
             "timeout": 5
           }
         ]
@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" green",
+            "command": "python3 \"$HOME/.codex/ai-semaphore-event.py\"",
             "timeout": 3
           }
         ]
@@ -72,8 +72,20 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$HOME/.codex/ai-semaphore-hook.sh\" green",
+            "command": "python3 \"$HOME/.codex/ai-semaphore-event.py\"",
             "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^(functions\\.)?request_user_input(_async)?$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.codex/ai-semaphore-event.py\"",
+            "timeout": 5
           }
         ]
       }
