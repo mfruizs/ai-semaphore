@@ -1,8 +1,16 @@
 # Codex CLI → AI Semaphore
 
-Install `hooks.json` and `ai-semaphore-hook.sh` together. Configure
+Install `hooks.json`, `ai-semaphore-event.py` and `ai-semaphore-hook.sh` together
+(Python 3.9+, Bash and curl required). Configure
 `AI_SEMAPHORE_TOKEN` or replace `<YOUR_TOKEN>` in the script, then review the
 definitions with `/hooks` in Codex.
+
+`PreToolUse` detects both `request_user_input` and `request_user_input_async`.
+The Python helper keeps pending questions red across unrelated tool completions
+and the async tool's immediate acknowledgement. The next `UserPromptSubmit`,
+interruption or session reset clears async questions; blocking questions clear
+when their tool returns. Replace old semaphore handlers when upgrading so they
+cannot overwrite the pending state. Keep unrelated hooks and the configured token.
 
 Full installation, event mappings and troubleshooting:
 

@@ -322,7 +322,7 @@ la carpeta de este repositorio y reinicia OpenDeck para cargar esa versión.
 
 ## 6. Conectar Codex CLI
 
-Esta integración requiere Bash y curl (Linux/macOS o un entorno que tenga
+Esta integración requiere Python 3.9+, Bash y curl (Linux/macOS o un entorno que tenga
 ambos). Consulta la [documentación oficial de hooks de Codex](https://learn.chatgpt.com/docs/hooks)
 para la disponibilidad según versión. Las versiones recientes activan los hooks
 por defecto; si hace falta, actívalos en el bloque `[features]` existente de
@@ -333,11 +333,12 @@ por defecto; si hace falta, actívalos en el bloque `[features]` existente de
 hooks = true
 ```
 
-Instala los dos archivos:
+Instala los tres archivos:
 
 ```bash
 mkdir -p ~/.codex
 cp codex-cli-hooks/ai-semaphore-hook.sh ~/.codex/ai-semaphore-hook.sh
+cp codex-cli-hooks/ai-semaphore-event.py ~/.codex/ai-semaphore-event.py
 chmod +x ~/.codex/ai-semaphore-hook.sh
 cp codex-cli-hooks/hooks.json ~/.codex/hooks.json
 ```
@@ -364,9 +365,29 @@ o en el entorno mantiene los comandos; editar `hooks.json` requiere otra revisi�
 | --- | --- |
 | `SessionStart` (startup/resume/clear) | Verde |
 | `UserPromptSubmit` | Amarillo |
+| `PreToolUse` (`request_user_input` / `request_user_input_async`) | Rojo mientras haya una pregunta pendiente |
 | `PermissionRequest` | Rojo |
-| `PostToolUse` | Amarillo; recupera el estado de trabajo tras un permiso |
-| `Stop`, `Interrupt`, `SessionEnd` | Verde |
+| `PostToolUse` | Amarillo tras un permiso o pregunta bloqueante; mantiene rojo con una pregunta pendiente |
+| `Stop` | Verde salvo que haya una pregunta pendiente |
+| `Interrupt`, `SessionEnd` | Verde; borra las preguntas pendientes |
+
+Elegir una opción usa una herramienta de entrada del usuario, por lo que
+`PermissionRequest` por sí solo no lo cubre. El matcher de `PreToolUse` contempla
+ambas herramientas, también con el prefijo `functions.`. El nuevo script guarda
+los identificadores de llamadas pendientes por sesión en
+`${XDG_CACHE_HOME:-$HOME/.cache}/ai-semaphore/codex-pending/`.
+El resultado inmediato `{accepted: true}` de la herramienta asíncrona solo
+confirma que se mostró la pregunta: no debe recuperar el amarillo. Las demás
+herramientas y `Stop` conservan el rojo hasta el siguiente `UserPromptSubmit`,
+interrupción, cierre o inicio de sesión. Una pregunta bloqueante se limpia con
+su propio `PostToolUse`. Solo se guardan identificadores y nombres de herramientas;
+no se guarda el texto de preguntas ni respuestas.
+
+Para actualizar, copia `ai-semaphore-event.py` e integra las nuevas entradas en
+los hooks instalados. Retira los handlers anteriores del semáforo para esos
+eventos: un handler antiguo amarillo/verde podría sobrescribir el rojo pendiente.
+Conserva los hooks ajenos al semáforo y revisa las nuevas definiciones con `/hooks`.
+Esta corrección no requiere actualizar el plugin de OpenDeck ni cambiar el token.
 
 La compactación no reinicia el semáforo. `PermissionRequest` marca rojo cuando
 Codex solicita aprobación; con `approval_policy = "never"` no esperes ese flujo.

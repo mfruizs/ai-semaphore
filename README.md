@@ -286,7 +286,7 @@ from this repository's folder and restart OpenDeck to load that version.
 
 ## 6. Connect Codex CLI
 
-The supplied integration needs Bash and curl (Linux/macOS, or an environment
+The supplied integration needs Python 3.9+, Bash and curl (Linux/macOS, or an environment
 with both tools installed). See the [official Codex hooks documentation](https://learn.chatgpt.com/docs/hooks)
 for version-specific availability. Recent Codex versions enable hooks by default;
 if needed, enable them in the existing `[features]` section of `~/.codex/config.toml`:
@@ -296,11 +296,12 @@ if needed, enable them in the existing `[features]` section of `~/.codex/config.
 hooks = true
 ```
 
-Install both files:
+Install the three files:
 
 ```bash
 mkdir -p ~/.codex
 cp codex-cli-hooks/ai-semaphore-hook.sh ~/.codex/ai-semaphore-hook.sh
+cp codex-cli-hooks/ai-semaphore-event.py ~/.codex/ai-semaphore-event.py
 chmod +x ~/.codex/ai-semaphore-hook.sh
 cp codex-cli-hooks/hooks.json ~/.codex/hooks.json
 ```
@@ -326,9 +327,27 @@ keeps the hook commands unchanged; editing `hooks.json` requires review again.
 | --- | --- |
 | `SessionStart` (startup/resume/clear) | Green |
 | `UserPromptSubmit` | Yellow |
+| `PreToolUse` (`request_user_input` / `request_user_input_async`) | Red while a question is pending |
 | `PermissionRequest` | Red |
-| `PostToolUse` | Yellow, restoring the working state after a permission |
-| `Stop`, `Interrupt`, `SessionEnd` | Green |
+| `PostToolUse` | Yellow after a permission or blocking question; stays red with a pending question |
+| `Stop` | Green unless a question is still pending |
+| `Interrupt`, `SessionEnd` | Green; clears pending questions |
+
+Choosing an option is a user-input tool call, so `PermissionRequest` alone
+does not cover it. The `PreToolUse` matcher covers both question tools, including
+their `functions.` prefix. The event helper remembers pending tool-call ids per
+session under `${XDG_CACHE_HOME:-$HOME/.cache}/ai-semaphore/codex-pending/`.
+An async tool's immediate `{accepted: true}` result only acknowledges that the
+question was shown: it must not restore yellow. Other tool completions and
+`Stop` preserve red until the next `UserPromptSubmit`, interruption, session end,
+or session start. A blocking question clears on its own `PostToolUse`.
+Only ids and tool names are stored; question and answer text are not stored.
+
+When upgrading, copy `ai-semaphore-event.py` and merge the updated event entries
+into your installed hooks. Remove the previous semaphore handlers for those
+events: otherwise an old yellow/green handler can overwrite the pending red
+state. Keep unrelated hooks. Review the updated definitions with `/hooks`.
+No OpenDeck plugin update or token change is needed for this fix.
 
 Compaction does not reset the semaphore. `PermissionRequest` only marks red
 when Codex requests approval; with `approval_policy = "never"`, do not expect
